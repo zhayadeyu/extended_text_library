@@ -17,13 +17,17 @@ abstract class SpecialTextSpanBuilder {
         final String char = data[i];
         textStack += char;
         if (specialText != null) {
-          // always append
-          // and remove endflag in getContent method
-          specialText.appendContent(char);
-          if (specialText.isEnd(textStack)) {
+          if (!specialText.isEnd(textStack)) {
+            specialText.appendContent(char);
+            if (i == data.length - 1) {
+              inlineList.add(specialText.finishText());
+              specialText = null;
+              textStack = '';
+            }
+          } else {
             inlineList.add(specialText.finishText());
             specialText = null;
-            textStack = '';
+            textStack = char; //exclude endFlag
           }
         } else {
           specialText = createSpecialText(textStack,
@@ -37,6 +41,11 @@ abstract class SpecialTextSpanBuilder {
               }
             }
             textStack = '';
+            if (i == data.length - 1) {
+              inlineList.add(specialText.finishText());
+              specialText = null;
+              textStack = '';
+            }
           }
         }
       }
@@ -74,44 +83,38 @@ abstract class SpecialText {
       : _content = StringBuffer();
   final StringBuffer _content;
 
-  /// start flag of SpecialText
+  ///start flag of SpecialText
   final String startFlag;
 
-  /// end flag of SpecialText
-  final String endFlag;
+  ///end flag of SpecialText, e.g. /[^a-z]$/
+  final RegExp endFlag;
 
-  /// TextStyle of SpecialText
-  final TextStyle? textStyle;
+  ///TextStyle of SpecialText
+  final TextStyle textStyle;
 
-  /// tap call back of SpecialText
+  ///tap call back of SpecialText
   final SpecialTextGestureTapCallback? onTap;
 
-  /// finish SpecialText
+  ///finish SpecialText
   InlineSpan finishText();
 
-  /// is end of SpecialText
-  bool isEnd(String value) => value.endsWith(endFlag);
+  ///is end of SpecialText
+  bool isEnd(String value) {
+    return value.contains(endFlag);
+  }
 
-  /// append text of SpecialText
+  ///append text of SpecialText
   void appendContent(String value) {
     _content.write(value);
   }
 
-  /// get content of SpecialText(not include startFlag and endFlag)
-  /// https://github.com/fluttercandies/extended_text/issues/76
+  ///get content of SpecialText
   String getContent() {
-    String content = _content.toString();
-    if (content.endsWith(endFlag)) {
-      content = content.substring(
-        0,
-        content.length - endFlag.length,
-      );
-    }
-    return content;
+    return _content.toString();
   }
 
   @override
   String toString() {
-    return startFlag + getContent() + endFlag;
+    return startFlag + getContent();
   }
 }
